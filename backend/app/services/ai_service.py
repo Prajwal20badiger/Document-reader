@@ -147,10 +147,16 @@ Guidelines:
                     suggestion="Verify the model name and document format."
                 )
             elif resp.status_code in (401, 403):
+                suggestion = "Please check that your API key is valid and has sufficient permissions."
+                if "free tier is not available" in error_msg.lower():
+                    suggestion = (
+                        "In Google AI Studio, click 'Create API key in a new project' (free tier is granted automatically to new projects) "
+                        "or enable billing at https://aistudio.google.com/billing. You can also use Offline Demo Mode."
+                    )
                 raise AIServiceException(
                     code="AI_AUTH_FAILED",
-                    message=f"AI authentication failed: {error_msg}",
-                    suggestion="Please check that your API key is valid and has sufficient permissions."
+                    message=f"AI service authorization failed: {error_msg}",
+                    suggestion=suggestion
                 )
             elif resp.status_code == 429:
                 raise AIServiceException(
