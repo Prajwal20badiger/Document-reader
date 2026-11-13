@@ -71,6 +71,11 @@ async def analyze_document(
             custom_model=x_ai_model
         )
 
+        if ai_result.get("_is_offline_demo"):
+            warnings.append(
+                "Offline Demo Mode: Processed using local extractive summarizer. Configure AI_API_KEY in Settings for full generative AI simplification."
+            )
+
         # 5. Build response
         return DocumentAnalyzeResponse(
             document_name=file.filename,

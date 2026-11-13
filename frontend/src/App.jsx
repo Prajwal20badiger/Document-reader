@@ -63,6 +63,12 @@ export default function App() {
     setLoading(false);
   };
 
+  const handleUseDemoMode = () => {
+    setApiKey('demo');
+    localStorage.setItem('doc_simplifier_api_key', 'demo');
+    setError(null);
+  };
+
   return (
     <div className="app-container">
       <Navbar
@@ -85,6 +91,7 @@ export default function App() {
           error={error}
           onDismiss={() => setError(null)}
           onOpenSettings={() => setIsSettingsOpen(true)}
+          onUseDemoMode={handleUseDemoMode}
         />
 
         {loading && <ProcessingStatus step={loadingStep} />}

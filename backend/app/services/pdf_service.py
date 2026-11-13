@@ -1,6 +1,6 @@
 import io
 from typing import Tuple, List
-import fitz  # PyMuPDF
+import pymupdf as fitz
 from PIL import Image
 from app.config import settings
 from app.services.ocr_service import ocr_service, OCRException

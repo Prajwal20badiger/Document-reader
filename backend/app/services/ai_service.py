@@ -62,8 +62,12 @@ Guidelines:
             raise AIServiceException(
                 code="AI_UNAVAILABLE",
                 message="AI service credentials are not configured.",
-                suggestion="Please configure AI_API_KEY in the backend .env or provide an API key in the UI settings."
+                suggestion="Please configure AI_API_KEY in the backend .env, enter a key in Settings, or use Offline Demo Mode."
             )
+
+        # Check for offline demo mode
+        if api_key.lower() == "demo":
+            return self._generate_offline_simplification(text, document_name)
 
         # Truncate text if excessively long to bound cost and latency (e.g. 30,000 chars)
         max_chars = 30000
@@ -280,5 +284,88 @@ Guidelines:
         parsed["glossary"] = normalized_glossary
 
         return parsed
+
+    def _generate_offline_simplification(self, text: str, document_name: str) -> Dict[str, Any]:
+        """
+        Extractive heuristic summarizer for offline demo mode when no external AI key is available.
+        Extracts key sentences, factual takeaways, and dynamic glossary definitions from document content.
+        """
+        lines = [line.strip() for line in text.splitlines() if line.strip()]
+        sentences = re.split(r'(?<=[.!?])\s+', " ".join(lines))
+        sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+
+        # Executive summary: informative early sentences
+        summary_sentences = []
+        for s in sentences:
+            if not any(hw in s.lower() for hw in ["table of contents", "page ", "prepared ", "version 1."]):
+                summary_sentences.append(s)
+            if len(summary_sentences) >= 3:
+                break
+        summary = " ".join(summary_sentences) if summary_sentences else f"Overview of document: {document_name}."
+
+        # Key points: sentences containing numbers, metrics, or requirement keywords
+        key_points = []
+        pattern = re.compile(r'\b(must|should|required|requirement|ensure|deliver|budget|percent|%|\d+|goal|purpose)\b', re.IGNORECASE)
+        for s in sentences:
+            if pattern.search(s) and 25 < len(s) < 160:
+                clean_pt = s.rstrip('.:')
+                if clean_pt not in key_points:
+                    key_points.append(clean_pt)
+            if len(key_points) >= 5:
+                break
+
+        if not key_points and sentences:
+            key_points = sentences[:4]
+
+        # Simplified text: structured readable paragraphs
+        cleaned_paragraphs = []
+        current_chunk = []
+        for s in sentences[:24]:
+            current_chunk.append(s)
+            if len(current_chunk) >= 3:
+                cleaned_paragraphs.append(" ".join(current_chunk))
+                current_chunk = []
+        if current_chunk:
+            cleaned_paragraphs.append(" ".join(current_chunk))
+        simplified_text = "\n\n".join(cleaned_paragraphs)
+
+        # Glossary: extract capitalized technical terms or acronyms
+        glossary = []
+        known_terms = {
+            "PRD": "Product Requirements Document outlining product purpose and features.",
+            "MVP": "Minimum Viable Product, a focused baseline version to test core value.",
+            "OCR": "Optical Character Recognition, converting image text into machine-readable characters.",
+            "API": "Application Programming Interface, enabling software modules to communicate.",
+            "PDF": "Portable Document Format, a fixed-layout document standard.",
+            "LLM": "Large Language Model, an AI model trained to process and generate language.",
+            "Vite": "A fast modern frontend build tool for web apps.",
+            "FastAPI": "A high-performance modern web framework for Python.",
+            "REST": "Representational State Transfer, a standard architectural style for web services.",
+            "DPI": "Dots Per Inch, measuring scanning or rendering image resolution."
+        }
+        text_upper = text.upper()
+        for term, defn in known_terms.items():
+            if re.search(rf'\b{re.escape(term)}\b', text_upper):
+                glossary.append({"term": term, "definition": defn})
+
+        # Pattern-based terms (e.g. "Term: Definition" or "Term - Definition")
+        for line in lines[:60]:
+            if ":" in line and len(line) < 120:
+                parts = line.split(":", 1)
+                term = parts[0].strip()
+                defn = parts[1].strip()
+                if 2 <= len(term.split()) <= 4 and len(defn) > 10:
+                    if not any(g["term"].lower() == term.lower() for g in glossary):
+                        glossary.append({"term": term, "definition": defn})
+            if len(glossary) >= 6:
+                break
+
+        return {
+            "summary": summary,
+            "simplified_text": simplified_text,
+            "key_points": key_points,
+            "glossary": glossary,
+            "_is_offline_demo": True
+        }
 
 ai_service = AIService()

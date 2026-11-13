@@ -3,7 +3,7 @@ import pytest
 from unittest.mock import patch, AsyncMock
 from fastapi.testclient import TestClient
 from PIL import Image, ImageDraw
-import fitz
+import pymupdf as fitz
 
 from app.main import app
 from app.services.ai_service import ai_service, AIServiceException
