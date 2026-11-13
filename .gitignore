@@ -1,0 +1,27 @@
+# Virtual environment & python caches
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# Frontend dependencies & builds
+node_modules/
+dist/
+build/
+.cache/
+
+# Environment files
+.env
+*.local
+
+# Cloned dependencies and datasets
+tesseract/
+tessdata/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
